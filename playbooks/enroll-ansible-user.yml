@@ -63,6 +63,7 @@
       ansible.builtin.lineinfile:
         path: "/home/{{ enroll_user }}/.ssh/authorized_keys"
         line: "{{ enroll_authorized_key }}"
+        create: true
         owner: "{{ enroll_user }}"
         group: "{{ enroll_user }}"
         mode: "0600"
