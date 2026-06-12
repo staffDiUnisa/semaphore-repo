@@ -40,6 +40,20 @@
           ansible_become_user: "{{ ansible_become_user | default('UNDEFINED') }}"
           ansible_become_pass_len: "{{ (ansible_become_pass | default('')) | length }}"
 
+    - name: "[DEBUG TEMP] Provare sudo -n direttamente (senza become Ansible)"
+      ansible.builtin.command: sudo -n -u root whoami
+      register: enroll_debug_sudo
+      become: false
+      changed_when: false
+      failed_when: false
+
+    - name: "[DEBUG TEMP] Mostrare risultato sudo -n"
+      ansible.builtin.debug:
+        msg:
+          rc: "{{ enroll_debug_sudo.rc }}"
+          stdout: "{{ enroll_debug_sudo.stdout }}"
+          stderr: "{{ enroll_debug_sudo.stderr }}"
+
     - name: Creare l'utente {{ enroll_user }} (se non esiste)
       ansible.builtin.user:
         name: "{{ enroll_user }}"
