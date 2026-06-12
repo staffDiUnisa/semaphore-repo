@@ -23,6 +23,15 @@
           Impostarla in group_vars/all.yml o come Extra Variable nel
           Template SemaphoreUI con la chiave pubblica dell'utente ansible.
 
+    - name: "[DEBUG TEMP] Verificare l'utente effettivo con become"
+      ansible.builtin.command: id
+      register: enroll_debug_id
+      changed_when: false
+
+    - name: "[DEBUG TEMP] Mostrare id"
+      ansible.builtin.debug:
+        var: enroll_debug_id.stdout
+
     - name: Creare l'utente {{ enroll_user }} (se non esiste)
       ansible.builtin.user:
         name: "{{ enroll_user }}"
