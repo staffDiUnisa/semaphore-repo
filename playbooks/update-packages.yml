@@ -18,9 +18,7 @@
       when: not dry_run
 
     - name: Verificare se ci sono pacchetti da aggiornare
-      apt:
-        upgrade: dist
-        dry_run: true
+      ansible.builtin.command: apt list --upgradable
       register: apt_dist_upgrade_check
       changed_when: false
 
