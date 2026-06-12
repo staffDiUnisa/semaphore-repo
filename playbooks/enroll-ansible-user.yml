@@ -32,6 +32,14 @@
       ansible.builtin.debug:
         var: enroll_debug_id.stdout
 
+    - name: "[DEBUG TEMP] Mostrare variabili become"
+      ansible.builtin.debug:
+        msg:
+          ansible_become: "{{ ansible_become | default('UNDEFINED') }}"
+          ansible_become_method: "{{ ansible_become_method | default('UNDEFINED') }}"
+          ansible_become_user: "{{ ansible_become_user | default('UNDEFINED') }}"
+          ansible_become_pass_len: "{{ (ansible_become_pass | default('')) | length }}"
+
     - name: Creare l'utente {{ enroll_user }} (se non esiste)
       ansible.builtin.user:
         name: "{{ enroll_user }}"
