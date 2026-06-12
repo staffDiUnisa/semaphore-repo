@@ -1,0 +1,39 @@
+---
+# Inventario di Staging
+# Usare questo file per i server di test/staging
+
+all:
+  vars:
+    ansible_user: ansible
+    ansible_port: 22
+    ansible_connection: ssh
+    ansible_become_method: sudo
+    ansible_become_user: root
+    ansible_connection_timeout: 30
+    ansible_command_timeout: 180
+
+  children:
+    webservers:
+      hosts:
+        web-staging.example.com:
+          ansible_host: 192.168.2.10
+      vars:
+        environment: staging
+        update_schedule: "saturday 2:00"
+
+    dbservers:
+      hosts:
+        db-staging.example.com:
+          ansible_host: 192.168.2.20
+      vars:
+        environment: staging
+        update_schedule: "saturday 3:00"
+        mysql_port: 3306
+        db_backup_before_update: true
+
+    monitoring:
+      hosts:
+        monitor-staging.example.com:
+          ansible_host: 192.168.2.30
+      vars:
+        environment: staging

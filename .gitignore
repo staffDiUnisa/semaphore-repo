@@ -1,0 +1,63 @@
+# ========================================
+# GIT IGNORE - SemaphoreUI Repository
+# ========================================
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+
+# SemaphoreUI configuration
+.semaphore/config.json
+.semaphore/*.json
+
+# SSH/GPG Keys
+.ssh/
+*.pem
+*.key
+*.pub
+
+# Ansible vault
+.vault_password
+**/*.vault
+**/vault.yml
+
+# Logs and tmp files
+*.log
+logs/
+tmp/
+.tmp/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.sublime-project
+.sublime-workspace
+*.code-workspace
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Sensitive data
+secrets/
+credentials/
+config/secrets/

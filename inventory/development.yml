@@ -1,0 +1,33 @@
+---
+# Inventario di Development
+# Usare questo file per i test locali / development
+
+all:
+  vars:
+    ansible_user: ansible
+    ansible_port: 22
+    ansible_connection: ssh
+    ansible_become_method: sudo
+    ansible_become_user: root
+    ansible_connection_timeout: 30
+    ansible_command_timeout: 180
+
+  children:
+    test_servers:
+      hosts:
+        test-server-1.local:
+          ansible_host: 192.168.3.10
+        test-server-2.local:
+          ansible_host: 192.168.3.11
+      vars:
+        environment: development
+        # In development, aggiornamenti più frequenti per testing
+        update_schedule: "daily 22:00"
+
+    local_vm:
+      hosts:
+        localhost:
+          ansible_connection: local
+          ansible_host: 127.0.0.1
+      vars:
+        environment: development

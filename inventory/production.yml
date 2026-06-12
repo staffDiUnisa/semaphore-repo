@@ -1,0 +1,66 @@
+---
+# Inventario di Produzione
+# Usare questo file per i server in produzione
+# 
+# I valori sensibili (password, chiavi) vanno configurati
+# tramite l'interfaccia di SemaphoreUI come credenziali
+
+all:
+  vars:
+    # Variabili globali per tutti gli host
+    ansible_user: ansible
+    ansible_port: 22
+    ansible_connection: ssh
+    ansible_become_method: sudo
+    ansible_become_user: root
+    # Timeout per le connessioni
+    ansible_connection_timeout: 30
+    ansible_command_timeout: 180
+
+  children:
+    webservers:
+      hosts:
+        web1.prod.example.com:
+          ansible_host: 192.168.1.10
+          server_role: "web_primary"
+        web2.prod.example.com:
+          ansible_host: 192.168.1.11
+          server_role: "web_secondary"
+        web3.prod.example.com:
+          ansible_host: 192.168.1.12
+          server_role: "web_tertiary"
+      vars:
+        # Variabili specifiche per webservers
+        environment: production
+        update_schedule: "sunday 2:00"
+
+    dbservers:
+      hosts:
+        db1.prod.example.com:
+          ansible_host: 192.168.1.20
+          server_role: "db_primary"
+        db2.prod.example.com:
+          ansible_host: 192.168.1.21
+          server_role: "db_replica"
+      vars:
+        # Variabili specifiche per database servers
+        environment: production
+        update_schedule: "sunday 3:00"
+        # Configurazioni database-specifiche
+        mysql_port: 3306
+        db_backup_before_update: true
+
+    monitoring:
+      hosts:
+        monitor.prod.example.com:
+          ansible_host: 192.168.1.30
+      vars:
+        environment: production
+        update_schedule: "sunday 1:00"
+
+    # Gruppo speciale per host che non devono essere aggiornati automaticamente
+    excluded:
+      hosts: []
+      # Esempio: uncommentare per escludere server specifici
+      # critical-db.example.com:
+      #   skip_updates: true

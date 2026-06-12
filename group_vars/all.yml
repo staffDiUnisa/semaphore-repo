@@ -1,0 +1,32 @@
+---
+# Variabili globali per tutti gli host
+# Queste variabili sono disponibili a tutti i playbook
+
+# Impostazioni di aggiornamento (default)
+update_packages_enabled: true
+force_reboot: false
+dry_run: false
+
+# Timeout globali
+ansible_timeout: 300
+ansible_connect_timeout: 30
+
+# Logging
+enable_logging: true
+log_path: "/var/log/ansible-semaphore"
+
+# Notifiche (da configurare tramite SemaphoreUI)
+notify_on_completion: false
+notification_email: "admin@example.com"
+
+# Backup prima degli aggiornamenti
+backup_before_update: false
+backup_path: "/var/backups/pre-update"
+
+# Impostazioni di sicurezza
+ansible_pipelining: true
+ansible_become_pass: "{{ vault_become_password | default(omit) }}"
+
+# Variabili per i template
+company_name: "Your Company"
+environment_tag: "{{ environment | default('unknown') }}"

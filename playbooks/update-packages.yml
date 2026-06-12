@@ -1,0 +1,86 @@
+---
+- name: Aggiornamento pacchetti Ubuntu e riavvio condizionato
+  hosts: all
+  become: true
+  gather_facts: true
+  
+  vars:
+    # Imposta a true per forzare il riavvio anche se non necessario
+    force_reboot: false
+    # Imposta a true per eseguire solo un dry-run (senza modifiche reali)
+    dry_run: false
+
+  tasks:
+    - name: Aggiornare la lista dei pacchetti
+      apt:
+        update_cache: yes
+        cache_valid_time: 0
+      when: not dry_run
+
+    - name: Verificare se ci sono pacchetti da aggiornare
+      apt:
+        upgrade: dist
+        dry_run: true
+      register: apt_dist_upgrade_check
+      changed_when: false
+
+    - name: Mostrare numero di pacchetti da aggiornare
+      debug:
+        msg: "Pacchetti da aggiornare: {{ apt_dist_upgrade_check.stdout_lines | length - 1 }}"
+
+    - name: Aggiornare i pacchetti (upgrade)
+      apt:
+        upgrade: dist
+      register: apt_upgrade_result
+      when: not dry_run
+      notify: Controllare se riavvio è necessario
+
+    - name: Eseguire apt autoremove
+      apt:
+        autoremove: yes
+        autoclean: yes
+      when: not dry_run
+      register: apt_autoremove_result
+
+    - name: Mostrare risultato autoremove
+      debug:
+        msg: "Pacchetti rimossi: {{ apt_autoremove_result.stdout_lines }}"
+      when: apt_autoremove_result.stdout_lines is defined and apt_autoremove_result.stdout_lines | length > 0
+
+  handlers:
+    - name: Controllare se riavvio è necessario
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
+      listen: Controllare se riavvio è necessario
+
+    - name: Riavviare il server se necessario
+      reboot:
+        msg: "Riavvio in corso a causa di aggiornamenti di sistema"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+      when: 
+        - not dry_run
+        - (force_reboot or reboot_required_file.stat.exists)
+      listen: Controllare se riavvio è necessario
+
+    - name: Attendere il riavvio del server
+      wait_for_connection:
+        delay: 30
+        timeout: 300
+      listen: Controllare se riavvio è necessario
+
+  post_tasks:
+    - name: Visualizzare riepilogo
+      debug:
+        msg: |
+          ========== RIEPILOGO AGGIORNAMENTO ==========
+          Host: {{ inventory_hostname }}
+          Pacchetti aggiornati: {{ apt_upgrade_result.changed | default(false) }}
+          Autoremove eseguito: {{ apt_autoremove_result.changed | default(false) }}
+          Riavvio forzato: {{ force_reboot }}
+          Riavvio necessario: {{ reboot_required_file.stat.exists | default(false) }}
+          =============================================
+      when: not dry_run
