@@ -23,37 +23,6 @@
           Impostarla in group_vars/all.yml o come Extra Variable nel
           Template SemaphoreUI con la chiave pubblica dell'utente ansible.
 
-    - name: "[DEBUG TEMP] Verificare l'utente effettivo con become"
-      ansible.builtin.command: id
-      register: enroll_debug_id
-      changed_when: false
-
-    - name: "[DEBUG TEMP] Mostrare id"
-      ansible.builtin.debug:
-        var: enroll_debug_id.stdout
-
-    - name: "[DEBUG TEMP] Mostrare variabili become"
-      ansible.builtin.debug:
-        msg:
-          ansible_become: "{{ ansible_become | default('UNDEFINED') }}"
-          ansible_become_method: "{{ ansible_become_method | default('UNDEFINED') }}"
-          ansible_become_user: "{{ ansible_become_user | default('UNDEFINED') }}"
-          ansible_become_pass_len: "{{ (ansible_become_pass | default('')) | length }}"
-
-    - name: "[DEBUG TEMP] Provare sudo -n direttamente (senza become Ansible)"
-      ansible.builtin.command: sudo -n -u root whoami
-      register: enroll_debug_sudo
-      become: false
-      changed_when: false
-      failed_when: false
-
-    - name: "[DEBUG TEMP] Mostrare risultato sudo -n"
-      ansible.builtin.debug:
-        msg:
-          rc: "{{ enroll_debug_sudo.rc }}"
-          stdout: "{{ enroll_debug_sudo.stdout }}"
-          stderr: "{{ enroll_debug_sudo.stderr }}"
-
     - name: Creare l'utente {{ enroll_user }} (se non esiste)
       ansible.builtin.user:
         name: "{{ enroll_user }}"
