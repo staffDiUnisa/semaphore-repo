@@ -8,12 +8,14 @@ semaphore-repo/
 ├── 📄 .gitignore                         # File da escludere da git
 │
 ├── 📁 playbooks/
-│   └── update-packages.yml              # Playbook principale
+│   ├── update-packages.yml              # Playbook principale
+│   └── enroll-ansible-user.yml          # Configura l'utente ansible su nuovi server
 │
 ├── 📁 inventory/
 │   ├── production.yml                   # Inventario produzione
 │   ├── staging.yml                      # Inventario staging
-│   └── development.yml                  # Inventario development
+│   ├── development.yml                  # Inventario development
+│   └── enrollment.yml                   # Nuovi server da configurare
 │
 ├── 📁 group_vars/
 │   └── all.yml                          # Variabili globali
@@ -73,6 +75,17 @@ Esegue:
 - `dry_run: true/false` - Modalità test
 - `force_reboot: true/false` - Forzare riavvio
 
+### playbooks/enroll-ansible-user.yml
+
+Da usare sui server su cui l'utente `ansible` non è ancora configurato. Esegue:
+
+1. ✅ Creazione utente `ansible` (se non esiste)
+2. ✅ Configurazione sudo `NOPASSWD`
+3. ✅ Autorizzazione della chiave pubblica SSH (`ansible_authorized_key`)
+4. ✅ Riepilogo operazioni
+
+**Richiede**: Credential "Login With Password" per un utente amministrativo con permessi sudo, e l'inventario `inventory/enrollment.yml`.
+
 ## 📦 Inventari
 
 ### inventory/production.yml
@@ -92,6 +105,11 @@ Esegue:
 - Server di test locali
 - localhost per sviluppo
 
+### inventory/enrollment.yml
+
+- Nuovi server non ancora configurati con l'utente `ansible`
+- Usato solo con `playbooks/enroll-ansible-user.yml`
+
 > ⚠️ Gli host elencati sono placeholder di esempio: aggiornarli con i server reali prima dell'uso.
 
 ## 🔧 Variabili
@@ -103,7 +121,8 @@ Variabili globali disponibili a tutti i playbook:
 - `update_packages_enabled` - Abilita aggiornamenti
 - `force_reboot` - Forza riavvio
 - `dry_run` - Modalità test
-- `environment` - Nome ambiente
+- `deploy_environment` - Nome ambiente
+- `ansible_authorized_key` - Chiave pubblica SSH dell'utente ansible (usata da `enroll-ansible-user.yml`)
 
 ## 🎯 Prossimi Passi
 

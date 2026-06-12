@@ -6,17 +6,9 @@ Guida rapida per collegare **questo repository** a un progetto **SemaphoreUI gi�
 
 ### 1. Configurare i Server Ansible
 
-Su **ogni server da gestire**, come root:
+Se l'utente `ansible` **non è ancora presente** sui server, usare il playbook `playbooks/enroll-ansible-user.yml` (vedi sezione "Enrollment di Nuovi Server" più sotto) per crearlo e configurarlo automaticamente.
 
-```bash
-useradd -m -s /bin/bash ansible
-echo "ansible ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/ansible
-passwd ansible
-
-# Aggiungere chiave SSH (opzionale, consigliato)
-mkdir -p /home/ansible/.ssh
-echo "ssh-rsa AAA... your_key" >> /home/ansible/.ssh/authorized_keys
-```
+Se invece l'utente `ansible` è già configurato su tutti i server, passare direttamente al punto 2.
 
 ### 2. Aggiornare gli Inventari
 
@@ -52,6 +44,49 @@ Ripetere per `inventory/staging.yml` (Staging) e `inventory/development.yml` (De
 3. **Username**: `ansible`
 4. **Private Key**: incollare la chiave privata SSH
 5. Salvare
+
+## 🆕 Enrollment di Nuovi Server
+
+Da fare **prima** di gestire un server con gli altri playbook, se l'utente `ansible` non è ancora configurato su quel server.
+
+### 1. Impostare la chiave pubblica SSH
+
+In `group_vars/all.yml`, impostare `ansible_authorized_key` con la chiave pubblica SSH corrispondente alla `ansible-production` creata sopra (il contenuto del file `.pub`).
+
+### 2. Creare la Credential dell'utente amministrativo
+
+**Menu → Credentials → New Credential**:
+
+1. **Type**: `Login With Password`
+2. **Name**: `bootstrap-admin`
+3. **Username** / **Password**: utente amministrativo già presente sul server, con permessi sudo
+4. Salvare
+
+### 3. Aggiungere i nuovi server all'inventario di enrollment
+
+Modificare `inventory/enrollment.yml` aggiungendo i nuovi host, poi in SemaphoreUI:
+
+**Menu → Inventories → New Inventory**:
+
+1. **Name**: `Enrollment`
+2. **Type**: `File`
+3. **File**: `inventory/enrollment.yml`
+4. Salvare
+
+### 4. Creare ed eseguire il Template di enrollment
+
+**Menu → Templates → New Template**:
+
+1. **Name**: `Enroll Ansible User`
+2. **Playbook**: `playbooks/enroll-ansible-user.yml`
+3. **Inventory**: `Enrollment`
+4. **Credentials**: `bootstrap-admin`
+5. **Become Method**: `sudo`
+6. **Create**, poi **Run** → **Start Task**
+
+### 5. Spostare i server enrollati
+
+Dopo l'esecuzione, spostare gli host da `inventory/enrollment.yml` a `inventory/production.yml` (o staging/development): da questo momento sono gestibili con la Credential SSH `ansible-production`.
 
 ## 🎯 Primo Task
 

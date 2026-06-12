@@ -1,6 +1,9 @@
 ---
 # Inventario di Development
 # Usare questo file per i test locali / development
+#
+# I valori sensibili (password, chiavi) vanno configurati
+# tramite l'interfaccia di SemaphoreUI come credenziali
 
 all:
   vars:
@@ -20,7 +23,7 @@ all:
         test-server-2.local:
           ansible_host: 192.168.3.11
       vars:
-        environment: development
+        deploy_environment: development
         # In development, aggiornamenti più frequenti per testing
         update_schedule: "daily 22:00"
 
@@ -30,4 +33,4 @@ all:
           ansible_connection: local
           ansible_host: 127.0.0.1
       vars:
-        environment: development
+        deploy_environment: development

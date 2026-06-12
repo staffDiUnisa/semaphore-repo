@@ -4,14 +4,16 @@ Repository **Ansible** da collegare a un progetto **SemaphoreUI** già esistente
 
 ## 📋 Contenuti
 
-```
+```text
 semaphore-repo/
 ├── playbooks/                 # Playbook Ansible
-│   └── update-packages.yml   # Aggiornamento pacchetti Ubuntu
+│   ├── update-packages.yml   # Aggiornamento pacchetti Ubuntu
+│   └── enroll-ansible-user.yml # Configura l'utente ansible su nuovi server
 ├── inventory/                 # Inventari per diversi ambienti
 │   ├── production.yml        # Server di produzione
 │   ├── staging.yml           # Server di staging
-│   └── development.yml       # Server di development
+│   ├── development.yml       # Server di development
+│   └── enrollment.yml        # Nuovi server da configurare
 ├── group_vars/               # Variabili per gruppi di host
 │   └── all.yml              # Variabili globali
 ├── host_vars/               # Variabili specifiche per singoli host
@@ -72,6 +74,27 @@ Aggiorna i pacchetti Ubuntu con:
    ```
 6. Run
 
+## 🛠️ Playbook di Enrollment
+
+### `playbooks/enroll-ansible-user.yml`
+
+Da usare sui server su cui l'utente `ansible` **non è ancora configurato**. Crea l'utente (se non esiste), lo configura in sudoers con `NOPASSWD` e autorizza la chiave pubblica SSH usata dagli altri playbook.
+
+**Prerequisiti:**
+
+- Una Credential **"Login With Password"** in SemaphoreUI per un utente amministrativo già presente sul server, con permessi sudo
+- La variabile `ansible_authorized_key` in `group_vars/all.yml` impostata con la chiave pubblica SSH (la chiave privata corrispondente è la Credential SSH usata dagli altri playbook)
+
+**Utilizzo in SemaphoreUI:**
+
+1. Templates → New Template
+2. Playbook: `playbooks/enroll-ansible-user.yml`
+3. Inventory: `enrollment.yml` (con i nuovi server da configurare)
+4. Credentials: utente amministrativo con permessi sudo (Login With Password)
+5. Run
+
+Dopo l'enrollment, spostare i nuovi host in `inventory/production.yml` (o staging/development): potranno essere gestiti con la Credential SSH dell'utente `ansible` come gli altri server.
+
 ## 📊 Inventari
 
 ### Production (`inventory/production.yml`)
@@ -88,13 +111,20 @@ Aggiorna i pacchetti Ubuntu con:
 - test-server-2.local
 - localhost (locale)
 
+### Enrollment (`inventory/enrollment.yml`)
+
+- Nuovi server non ancora configurati con l'utente `ansible`
+- Usato solo con `playbooks/enroll-ansible-user.yml`
+
 > ⚠️ Gli host elencati sono placeholder di esempio: modificarli con i server reali prima dell'uso.
 
 ## 🔐 Sicurezza
 
 ### Configurazione Server Ansible
 
-Su ogni server gestito, come root:
+Modo consigliato: eseguire `playbooks/enroll-ansible-user.yml` (sezione "Playbook di Enrollment" sopra), che crea l'utente, configura sudo `NOPASSWD` e autorizza la chiave SSH automaticamente.
+
+In alternativa, manualmente su ogni server gestito, come root:
 
 ```bash
 # Creare utente ansible
@@ -137,7 +167,7 @@ update_packages_enabled: true    # Abilitare aggiornamenti
 force_reboot: false               # Forzare riavvio
 dry_run: false                    # Test mode
 backup_before_update: false       # Backup pre-update
-environment: production           # Ambiente
+deploy_environment: production    # Ambiente
 ```
 
 ### Per Host (`inventory/XXXXX.yml`)

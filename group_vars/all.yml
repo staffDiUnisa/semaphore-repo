@@ -29,4 +29,11 @@ ansible_become_pass: "{{ vault_become_password | default(omit) }}"
 
 # Variabili per i template
 company_name: "Your Company"
-environment_tag: "{{ environment | default('unknown') }}"
+environment_tag: "{{ deploy_environment | default('unknown') }}"
+
+# Chiave pubblica SSH dell'utente ansible, usata dal playbook
+# playbooks/enroll-ansible-user.yml per autorizzare l'accesso.
+# La chiave privata corrispondente e' la Credential SSH configurata
+# in SemaphoreUI per tutti gli altri playbook.
+# Sostituire con la chiave pubblica reale (contenuto del file .pub).
+ansible_authorized_key: "ssh-ed25519 AAAA... ansible@semaphore"

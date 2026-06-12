@@ -1,0 +1,26 @@
+---
+# Inventario di Enrollment
+#
+# Usare questo inventario con playbooks/enroll-ansible-user.yml per
+# configurare l'utente 'ansible' sui server su cui non e' ancora presente.
+#
+# Connessione: nel Template SemaphoreUI selezionare una Credential
+# "Login With Password" relativa a un utente amministrativo esistente
+# sul server, con permessi sudo (sudoers). Non impostare qui
+# ansible_user/ansible_connection: vengono forniti dalla Credential
+# del Template.
+
+all:
+  vars:
+    ansible_port: 22
+    ansible_become_method: sudo
+    ansible_become_user: root
+
+  hosts:
+    # Aggiungere qui i nuovi server da configurare, poi rimuoverli
+    # una volta completato l'enrollment (o spostarli negli inventari
+    # production/staging/development).
+    newserver1.example.com:
+      ansible_host: 192.168.1.50
+    newserver2.example.com:
+      ansible_host: 192.168.1.51

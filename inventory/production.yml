@@ -31,7 +31,7 @@ all:
           server_role: "web_tertiary"
       vars:
         # Variabili specifiche per webservers
-        environment: production
+        deploy_environment: production
         update_schedule: "sunday 2:00"
 
     dbservers:
@@ -44,7 +44,7 @@ all:
           server_role: "db_replica"
       vars:
         # Variabili specifiche per database servers
-        environment: production
+        deploy_environment: production
         update_schedule: "sunday 3:00"
         # Configurazioni database-specifiche
         mysql_port: 3306
@@ -55,12 +55,12 @@ all:
         monitor.prod.example.com:
           ansible_host: 192.168.1.30
       vars:
-        environment: production
+        deploy_environment: production
         update_schedule: "sunday 1:00"
 
     # Gruppo speciale per host che non devono essere aggiornati automaticamente
     excluded:
-      hosts: []
+      hosts: {}
       # Esempio: uncommentare per escludere server specifici
       # critical-db.example.com:
       #   skip_updates: true

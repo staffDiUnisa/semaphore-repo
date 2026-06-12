@@ -1,0 +1,80 @@
+---
+- name: Enrollment - Creare e configurare l'utente ansible sui nuovi server
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    enroll_user: ansible
+    enroll_shell: /bin/bash
+    # Chiave pubblica SSH dell'utente ansible: la chiave privata corrispondente
+    # e' la Credential SSH configurata in SemaphoreUI per gli altri playbook.
+    # Valore di default in group_vars/all.yml (ansible_authorized_key),
+    # sovrascrivibile come Extra Variable nel Template.
+    enroll_authorized_key: "{{ ansible_authorized_key | default('') }}"
+
+  tasks:
+    - name: Verificare che la chiave pubblica SSH sia stata fornita
+      ansible.builtin.assert:
+        that:
+          - enroll_authorized_key | length > 0
+        fail_msg: >-
+          Variabile 'ansible_authorized_key' non definita o vuota.
+          Impostarla in group_vars/all.yml o come Extra Variable nel
+          Template SemaphoreUI con la chiave pubblica dell'utente ansible.
+
+    - name: Creare l'utente {{ enroll_user }} (se non esiste)
+      ansible.builtin.user:
+        name: "{{ enroll_user }}"
+        shell: "{{ enroll_shell }}"
+        create_home: true
+        state: present
+      register: enroll_user_result
+
+    - name: Configurare sudo NOPASSWD per l'utente {{ enroll_user }}
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ enroll_user }}"
+        content: "{{ enroll_user }} ALL=(ALL) NOPASSWD:ALL\n"
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+      register: enroll_sudoers_result
+
+    - name: Creare la directory .ssh per l'utente {{ enroll_user }}
+      ansible.builtin.file:
+        path: "/home/{{ enroll_user }}/.ssh"
+        state: directory
+        owner: "{{ enroll_user }}"
+        group: "{{ enroll_user }}"
+        mode: "0700"
+
+    - name: Creare il file authorized_keys se non esiste
+      ansible.builtin.file:
+        path: "/home/{{ enroll_user }}/.ssh/authorized_keys"
+        state: touch
+        owner: "{{ enroll_user }}"
+        group: "{{ enroll_user }}"
+        mode: "0600"
+        modification_time: preserve
+        access_time: preserve
+
+    - name: Autorizzare la chiave SSH pubblica per l'utente {{ enroll_user }}
+      ansible.builtin.lineinfile:
+        path: "/home/{{ enroll_user }}/.ssh/authorized_keys"
+        line: "{{ enroll_authorized_key }}"
+        owner: "{{ enroll_user }}"
+        group: "{{ enroll_user }}"
+        mode: "0600"
+      register: enroll_key_result
+
+  post_tasks:
+    - name: Visualizzare riepilogo enrollment
+      debug:
+        msg: |
+          ========== RIEPILOGO ENROLLMENT ==========
+          Host: {{ inventory_hostname }}
+          Utente '{{ enroll_user }}' creato/modificato: {{ enroll_user_result.changed }}
+          Sudo NOPASSWD configurato: {{ enroll_sudoers_result.changed }}
+          Chiave SSH autorizzata aggiunta: {{ enroll_key_result.changed }}
+          ===========================================

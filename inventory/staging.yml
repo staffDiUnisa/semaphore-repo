@@ -1,6 +1,9 @@
 ---
 # Inventario di Staging
 # Usare questo file per i server di test/staging
+#
+# I valori sensibili (password, chiavi) vanno configurati
+# tramite l'interfaccia di SemaphoreUI come credenziali
 
 all:
   vars:
@@ -18,7 +21,7 @@ all:
         web-staging.example.com:
           ansible_host: 192.168.2.10
       vars:
-        environment: staging
+        deploy_environment: staging
         update_schedule: "saturday 2:00"
 
     dbservers:
@@ -26,7 +29,7 @@ all:
         db-staging.example.com:
           ansible_host: 192.168.2.20
       vars:
-        environment: staging
+        deploy_environment: staging
         update_schedule: "saturday 3:00"
         mysql_port: 3306
         db_backup_before_update: true
@@ -36,4 +39,4 @@ all:
         monitor-staging.example.com:
           ansible_host: 192.168.2.30
       vars:
-        environment: staging
+        deploy_environment: staging
