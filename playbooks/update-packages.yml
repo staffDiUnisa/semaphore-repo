@@ -11,39 +11,62 @@
     dry_run: false
 
   tasks:
-    - name: Aggiornare la lista dei pacchetti
-      apt:
-        update_cache: yes
-        cache_valid_time: 0
-      when: not dry_run
+    - block:
+        - name: Aggiornare la lista dei pacchetti
+          apt:
+            update_cache: yes
+            cache_valid_time: 0
+          when: not dry_run
 
-    - name: Verificare se ci sono pacchetti da aggiornare
-      ansible.builtin.command: apt list --upgradable
-      register: apt_dist_upgrade_check
-      changed_when: false
+        - name: Verificare se ci sono pacchetti da aggiornare
+          ansible.builtin.command: apt list --upgradable
+          register: apt_dist_upgrade_check
+          changed_when: false
 
-    - name: Mostrare numero di pacchetti da aggiornare
-      debug:
-        msg: "Pacchetti da aggiornare: {{ apt_dist_upgrade_check.stdout_lines | length - 1 }}"
+        - name: Mostrare numero di pacchetti da aggiornare
+          debug:
+            msg: "Pacchetti da aggiornare: {{ apt_dist_upgrade_check.stdout_lines | length - 1 }}"
 
-    - name: Aggiornare i pacchetti (upgrade)
-      apt:
-        upgrade: dist
-      register: apt_upgrade_result
-      when: not dry_run
-      notify: Controllare se riavvio è necessario
+        - name: Aggiornare i pacchetti (upgrade)
+          apt:
+            upgrade: dist
+          register: apt_upgrade_result
+          when: not dry_run
+          notify: Controllare se riavvio è necessario
 
-    - name: Eseguire apt autoremove
-      apt:
-        autoremove: yes
-        autoclean: yes
-      when: not dry_run
-      register: apt_autoremove_result
+        - name: Eseguire apt autoremove
+          apt:
+            autoremove: yes
+            autoclean: yes
+          when: not dry_run
+          register: apt_autoremove_result
 
-    - name: Mostrare risultato autoremove
-      debug:
-        msg: "Pacchetti rimossi: {{ apt_autoremove_result.stdout_lines }}"
-      when: apt_autoremove_result.stdout_lines is defined and apt_autoremove_result.stdout_lines | length > 0
+        - name: Mostrare risultato autoremove
+          debug:
+            msg: "Pacchetti rimossi: {{ apt_autoremove_result.stdout_lines }}"
+          when: apt_autoremove_result.stdout_lines is defined and apt_autoremove_result.stdout_lines | length > 0
+
+        - name: Eseguire gli handler in sospeso (riavvio)
+          meta: flush_handlers
+
+        - name: Registrare l'esito positivo per il riepilogo email
+          ansible.builtin.set_fact:
+            update_task_status: success
+            update_task_message: >-
+              Pacchetti da aggiornare: {{ apt_dist_upgrade_check.stdout_lines | length - 1 }}.
+              Aggiornamento eseguito: {{ apt_upgrade_result.changed | default(false) }}.
+              Riavvio necessario: {{ reboot_required_file.stat.exists | default(false) }}.
+            cacheable: true
+      rescue:
+        - name: Registrare l'errore per il riepilogo email
+          ansible.builtin.set_fact:
+            update_task_status: failed
+            update_task_message: "{{ ansible_failed_result.msg | default('Errore durante l\\'aggiornamento dei pacchetti') }}"
+            cacheable: true
+
+        - name: Propagare l'errore originale
+          ansible.builtin.fail:
+            msg: "{{ update_task_message }}"
 
   handlers:
     - name: Controllare se riavvio è necessario
@@ -82,3 +105,49 @@
           Riavvio necessario: {{ reboot_required_file.stat.exists | default(false) }}
           =============================================
       when: not dry_run
+
+- name: Invio email di riepilogo aggiornamento
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+
+  vars:
+    summary_hosts: "{{ groups['all'] | default([]) | difference(['localhost']) }}"
+    summary_has_issues: >-
+      {{
+        summary_hosts
+        | map('extract', hostvars)
+        | map(attribute='update_task_status', default='unreachable')
+        | select('ne', 'success')
+        | list | length > 0
+      }}
+
+  tasks:
+    - name: Comporre il corpo dell'email di riepilogo
+      ansible.builtin.set_fact:
+        summary_body: |
+          Riepilogo task "Aggiornamento pacchetti Ubuntu" - {{ environment_tag | default('n/d') }}
+          Dry run: {{ dry_run | default(false) }}
+          Host coinvolti: {{ summary_hosts | length }}
+
+          {% for h in summary_hosts %}
+          - {{ h }}: {{ hostvars[h].get('update_task_status', 'unreachable') | upper }}
+            {{ hostvars[h].get('update_task_message', 'Host non raggiunto o task non eseguito.') }}
+          {% endfor %}
+
+    - name: Inviare l'email di riepilogo
+      community.general.mail:
+        host: "{{ smtp_host }}"
+        port: "{{ smtp_port }}"
+        username: "{{ smtp_username }}"
+        password: "{{ smtp_password }}"
+        secure: "{{ 'always' if smtp_port | int == 465 else 'starttls' }}"
+        from: "{{ notification_email_from }}"
+        to: "{{ notification_email }}"
+        subject: >-
+          [{{ 'ERRORE' if (summary_has_issues | bool) else 'OK' }}]
+          Aggiornamento pacchetti{{ ' (dry run)' if dry_run | default(false) else '' }}
+          - {{ summary_hosts | length }} host
+        body: "{{ summary_body }}"
+      when: notify_on_completion | default(false)

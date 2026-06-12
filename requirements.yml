@@ -1,0 +1,6 @@
+---
+# Collection necessarie per i playbook di questo repository.
+# SemaphoreUI esegue automaticamente "ansible-galaxy collection install -r requirements.yml"
+# se questo file e' presente nella root del repository.
+collections:
+  - name: community.general

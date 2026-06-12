@@ -15,9 +15,18 @@ ansible_connect_timeout: 30
 enable_logging: true
 log_path: "/var/log/ansible-semaphore"
 
-# Notifiche (da configurare tramite SemaphoreUI)
+# Notifiche email di riepilogo a fine task (da configurare tramite SemaphoreUI)
 notify_on_completion: false
 notification_email: "admin@example.com"
+notification_email_from: "update@cs.unisa.it"
+
+# Configurazione SMTP per l'invio delle email di riepilogo
+smtp_host: "smtp.cs.unisa.it"
+smtp_port: 465
+smtp_username: "staffdi"
+# Password SMTP: NON salvarla qui in chiaro. Impostare 'vault_smtp_password'
+# tramite Ansible Vault o come Extra Variable/Environment in SemaphoreUI.
+smtp_password: "{{ vault_smtp_password | default('') }}"
 
 # Backup prima degli aggiornamenti
 backup_before_update: false
