@@ -16,7 +16,7 @@
           apt:
             update_cache: yes
             cache_valid_time: 0
-          when: not dry_run
+          when: not (dry_run | bool)
 
         - name: Verificare se ci sono pacchetti da aggiornare
           ansible.builtin.command: apt list --upgradable
@@ -31,14 +31,14 @@
           apt:
             upgrade: dist
           register: apt_upgrade_result
-          when: not dry_run
+          when: not (dry_run | bool)
           notify: Controllare se riavvio è necessario
 
         - name: Eseguire apt autoremove
           apt:
             autoremove: yes
             autoclean: yes
-          when: not dry_run
+          when: not (dry_run | bool)
           register: apt_autoremove_result
 
         - name: Mostrare risultato autoremove
@@ -82,9 +82,9 @@
         reboot_timeout: 600
         pre_reboot_delay: 0
         post_reboot_delay: 30
-      when: 
-        - not dry_run
-        - (force_reboot or reboot_required_file.stat.exists)
+      when:
+        - not (dry_run | bool)
+        - (force_reboot | bool) or reboot_required_file.stat.exists
       listen: Controllare se riavvio è necessario
 
     - name: Attendere il riavvio del server
@@ -104,7 +104,7 @@
           Riavvio forzato: {{ force_reboot }}
           Riavvio necessario: {{ reboot_required_file.stat.exists | default(false) }}
           =============================================
-      when: not dry_run
+      when: not (dry_run | bool)
 
 - name: Invio email di riepilogo aggiornamento
   hosts: localhost
@@ -147,7 +147,7 @@
         to: "{{ notification_email }}"
         subject: >-
           [{{ 'ERRORE' if (summary_has_issues | bool) else 'OK' }}]
-          Aggiornamento pacchetti{{ ' (dry run)' if dry_run | default(false) else '' }}
+          Aggiornamento pacchetti{{ ' (dry run)' if (dry_run | default(false) | bool) else '' }}
           - {{ summary_hosts | length }} host
         body: "{{ summary_body }}"
-      when: notify_on_completion | default(false)
+      when: notify_on_completion | default(false) | bool
