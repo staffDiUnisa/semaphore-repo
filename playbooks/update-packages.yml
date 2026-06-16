@@ -151,3 +151,4 @@
           - {{ summary_hosts | length }} host
         body: "{{ summary_body }}"
       when: notify_on_completion | default(false) | bool
+      ignore_errors: false
