@@ -41,10 +41,24 @@
           when: not (dry_run | bool)
           register: apt_autoremove_result
 
+        # apt-get prints "Removing <pkg> (<version>) ..." for autoremove and
+        # "Del <file> ..." for autoclean (cached .deb files, not packages).
         - name: Mostrare risultato autoremove
           debug:
-            msg: "Pacchetti rimossi: {{ apt_autoremove_result.stdout_lines }}"
-          when: apt_autoremove_result.stdout_lines is defined and apt_autoremove_result.stdout_lines | length > 0
+            msg: >-
+              Pacchetti rimossi: {{ apt_removed_packages | join(', ') if apt_removed_packages else 'nessuno' }}.
+              File eliminati dalla cache: {{ apt_cleaned_files | length }}.
+          vars:
+            apt_removed_packages: >-
+              {{ apt_autoremove_result.stdout_lines | default([])
+                 | select('match', '^Removing ')
+                 | map('regex_replace', '^Removing (\S+).*$', '\1')
+                 | list }}
+            apt_cleaned_files: >-
+              {{ apt_autoremove_result.stdout_lines | default([])
+                 | select('match', '^Del ')
+                 | list }}
+          when: apt_autoremove_result.stdout_lines is defined
 
         - name: Eseguire gli handler in sospeso (riavvio)
           meta: flush_handlers
@@ -114,14 +128,18 @@
 
   vars:
     summary_hosts: "{{ groups['all'] | default([]) | difference(['localhost']) }}"
-    summary_has_issues: >-
+    # Hosts that were unreachable never ran set_fact, so they have no status.
+    summary_statuses: >-
       {{
         summary_hosts
         | map('extract', hostvars)
         | map(attribute='update_task_status', default='unreachable')
-        | select('ne', 'success')
-        | list | length > 0
+        | list
       }}
+    summary_ok_hosts: "{{ summary_hosts | zip(summary_statuses) | selectattr('1', 'eq', 'success') | map(attribute='0') | list }}"
+    summary_failed_hosts: "{{ summary_hosts | zip(summary_statuses) | selectattr('1', 'eq', 'failed') | map(attribute='0') | list }}"
+    summary_unreachable_hosts: "{{ summary_hosts | zip(summary_statuses) | selectattr('1', 'eq', 'unreachable') | map(attribute='0') | list }}"
+    summary_has_issues: "{{ (summary_failed_hosts + summary_unreachable_hosts) | length > 0 }}"
 
   tasks:
     - name: Comporre il corpo dell'email di riepilogo
@@ -130,7 +148,11 @@
           Riepilogo task "Aggiornamento pacchetti Ubuntu" - {{ environment_tag | default('n/d') }}
           Dry run: {{ dry_run | default(false) }}
           Host coinvolti: {{ summary_hosts | length }}
+          Aggiornati: {{ summary_ok_hosts | length }}
+          Falliti: {{ summary_failed_hosts | length }}{{ (' (' ~ (summary_failed_hosts | join(', ')) ~ ')') if summary_failed_hosts else '' }}
+          Irraggiungibili: {{ summary_unreachable_hosts | length }}{{ (' (' ~ (summary_unreachable_hosts | join(', ')) ~ ')') if summary_unreachable_hosts else '' }}
 
+          Dettaglio per host:
           {% for h in summary_hosts %}
           - {{ h }}: {{ hostvars[h].get('update_task_status', 'unreachable') | upper }}
             {{ hostvars[h].get('update_task_message', 'Host non raggiunto o task non eseguito.') }}
@@ -148,7 +170,9 @@
         subject: >-
           [{{ 'ERRORE' if (summary_has_issues | bool) else 'OK' }}]
           Aggiornamento pacchetti{{ ' (dry run)' if (dry_run | default(false) | bool) else '' }}
-          - {{ summary_hosts | length }} host
+          - {{ summary_ok_hosts | length }}/{{ summary_hosts | length }} host aggiornati{{
+            (', ' ~ (summary_unreachable_hosts | length) ~ ' irraggiungibili') if summary_unreachable_hosts else '' }}{{
+            (', ' ~ (summary_failed_hosts | length) ~ ' falliti') if summary_failed_hosts else '' }}
         body: "{{ summary_body }}"
       when: notify_on_completion | default(false) | bool
       ignore_errors: false
